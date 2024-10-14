@@ -49,7 +49,7 @@ jobs:
         workflow: plan.yml  # Specify the workflow file where the artifact was created
         pr: ${{ steps.pr-id.outputs.PR_NUMBER }}  # Use the PR number from your previous step
         name: terraform-artifacts  # Artifact name with PR number
-        path: azure  # Directory to download the artifact to
+        path: main  # Directory to download the artifact to
 
     - name: Initialize Terraform
       run: |
