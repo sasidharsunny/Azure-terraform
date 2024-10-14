@@ -1,10 +1,10 @@
 name: Terraform Apply
 
-# Trigger the workflow on push to the main branch (after PR merges)
+# Trigger the workflow on push to the main branch (after PR merge)
 on:
   push:
     branches:
-      - main  # Adjust this to the branch where you want to apply 
+      - main  # Adjust this to the branch where you want to apply changes
 
 permissions:
   id-token: write
@@ -50,7 +50,6 @@ jobs:
         pr: ${{ steps.pr-id.outputs.PR_NUMBER }}  # Use the PR number from your previous step
         name: terraform-artifacts  # Artifact name with PR number
         path: main  # Directory to download the artifact to
-
 
     - name: Initialize Terraform
       run: |
