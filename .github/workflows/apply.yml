@@ -43,11 +43,13 @@ jobs:
 
     - name: Download Plan and Lock Files
       id: download-config
-      uses: actions/download-artifact@v4
+      uses: dawidd6/action-download-artifact@v6
       with:
-        name: terraform-artifacts  # Must match the uploaded artifact name
-        path: azure  # Where to download the artifacts
-        workflow: plan.yml  # Ensure this is the correct path if in subdirectory
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        workflow: plan.yml  # Specify the workflow file where the artifact was created
+        pr: ${{ steps.pr-id.outputs.PR_NUMBER }}  # Use the PR number from your previous step
+        name: terraform-artifacts  # Artifact name with PR number
+        path: azure  # Directory to download the artifact to
 
 
     - name: Initialize Terraform
