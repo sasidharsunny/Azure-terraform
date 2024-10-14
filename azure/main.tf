@@ -1,7 +1,7 @@
 # Define the Resource Group
 resource "azurerm_resource_group" "gpt-group" {
   location = "swedencentral"
-  name     = "MyOpenAIGPT"
+  name     = "MyOpenAIGPTONE"
 }
 
 # Define the Cognitive Account (with the SKU)
