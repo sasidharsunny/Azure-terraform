@@ -1,6 +1,10 @@
-# Define the Resource Group
-resource "azurerm_resource_group" "gpt-group" {
-  location = "swedencentral"
-  name     = "MyOpenAIGPT"
+# Configure the Azure provider
+provider "azurerm" {
+  features {}
 }
 
+# Define a resource group
+resource "azurerm_resource_group" "example" {
+  name     = "example-resources"
+  location = "East US"
+}
