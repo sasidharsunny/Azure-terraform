@@ -1,0 +1,129 @@
+name: Terraform Plan
+
+on:
+  pull_request:
+
+permissions:
+  id-token: write
+  contents: read  # Ensure that code is accessible during the workflow
+
+env:
+  ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  TERRAFORM_VERSION: "1.5.0"
+  TF_IN_AUTOMATION: "True"
+  TARGET_ENV: "azure"
+
+jobs:
+  terraform_plan:
+    runs-on: ubuntu-latest
+    if: github.event.review.state != 'approved'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        client-id: ${{ env.ARM_CLIENT_ID }}
+        tenant-id: ${{ env.ARM_TENANT_ID }}
+        subscription-id: ${{ env.ARM_SUBSCRIPTION_ID }}
+        client-secret: ${{ env.ARM_CLIENT_SECRET }}
+
+    - name: Install Checkov if not present
+      run: |
+        if ! command -v checkov &> /dev/null; then
+          echo "Checkov not found. Installing..."
+          python3 -m pip install --upgrade pip
+          pip install checkov
+        else
+          echo "Checkov is already installed."
+        fi
+
+    - name: Terraform Init, Upgrade and Validate
+      run: |
+        echo "Ref name: ${{ github.ref_name }}"
+        echo "Target environment: $TARGET_ENV"
+        
+        if [ -d "${TARGET_ENV}/" ]; then
+          for dir in ${TARGET_ENV}/*/; do
+            if [ -d "$dir" ]; then
+              cd $dir
+              env=$(basename "$dir")
+              
+              echo "*************** TERRAFORM INIT, UPGRADE and VALIDATE ******************"
+              echo "******* At environment: ${env} ********"
+              
+              terraform init -upgrade || exit 1
+              terraform validate || exit 1
+              
+              echo "*************** Running Checkov ******************"
+              checkov --directory . || true || exit 1
+              
+              cd - > /dev/null
+            fi
+          done
+        else
+          echo "*************** SKIPPING INIT ******************"
+          echo "Directory '${TARGET_ENV}' does not exist."
+          exit 1
+        fi
+
+    - name: Terraform Plan
+      id: plan
+      shell: bash
+      run: |
+        echo "Starting Terraform Plan"
+        echo "Target environment: $TARGET_ENV"
+        
+        if [ -d "${TARGET_ENV}/" ]; then
+          for dir in ${TARGET_ENV}/*/; do
+            if [ -d "$dir" ]; then
+              cd $dir
+              env=$(basename "$dir")
+              
+              echo "*************** TERRAFORM PLAN in $dir ******************"
+              terraform plan -no-color -out=tfplan-${env}.out
+              
+              cd - > /dev/null
+            fi
+          done
+        else
+          echo "Directory '${TARGET_ENV}' does not exist."
+          exit 1
+        fi
+
+    - name: Upload Terraform Plans and Configuration as Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: terraform-artifacts
+        path: |
+           azure/**/*.out
+           azure/**/*.hcl
+           azure/.terraform.lock.hcl
+        include-hidden-files: true
+
+  branch_index_check:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Branch Index Check
+        run: |
+          echo "Running branch index check..."
+          if [ ! -f "config/index_file.txt" ]; then
+            echo "Index check failed: index_file.txt is missing"
+            exit 1
+          fi
+          echo "Branch index check passed"
