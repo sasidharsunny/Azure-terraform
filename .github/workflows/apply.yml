@@ -43,7 +43,7 @@ jobs:
 
     - name: Download Plan and Lock Files
       id: download-config
-      uses: dawidd6/action-download-artifact@v6
+      uses: actions/download-artifact@v4
       with:
         name: terraform-artifacts  # Must match the uploaded artifact name
         path: azure  # Where to download the artifacts
